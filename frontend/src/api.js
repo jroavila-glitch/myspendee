@@ -1,0 +1,25 @@
+import axios from 'axios'
+
+const BASE = import.meta.env.VITE_API_URL || '/api'
+
+const api = axios.create({ baseURL: BASE })
+
+export const uploadPDFs = (files) => {
+  const form = new FormData()
+  files.forEach(f => form.append('files', f))
+  return api.post('/upload', form, { headers: { 'Content-Type': 'multipart/form-data' } })
+}
+
+export const getTransactions = (params) => api.get('/transactions', { params })
+
+export const createTransaction = (data) => api.post('/transactions', data)
+
+export const deleteTransaction = (id) => api.delete(`/transactions/${id}`)
+
+export const getSummary = (month, year) => api.get('/summary', { params: { month, year } })
+
+export const getBreakdown = (month, year) => api.get('/breakdown', { params: { month, year } })
+
+export const getBanks = () => api.get('/banks')
+
+export const getCategories = () => api.get('/categories')

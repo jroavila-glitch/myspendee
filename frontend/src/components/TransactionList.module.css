@@ -1,0 +1,161 @@
+.container {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.empty {
+  text-align: center;
+  color: #aaa;
+  padding: 40px;
+  font-size: 0.9rem;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.table th {
+  text-align: left;
+  color: #888;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  padding: 10px 14px;
+  background: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.row {
+  transition: background 0.1s;
+}
+
+.row:hover { background: #fafafa; }
+
+.row td {
+  padding: 11px 14px;
+  border-bottom: 1px solid #f3f4f6;
+  color: #333;
+  vertical-align: middle;
+}
+
+.row:last-child td { border-bottom: none; }
+
+.date {
+  white-space: nowrap;
+  color: #666;
+  font-size: 0.8rem;
+}
+
+.desc {
+  max-width: 280px;
+}
+
+.descText {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 500;
+}
+
+.badge {
+  display: inline-block;
+  background: #ede9fe;
+  color: #6d28d9;
+  font-size: 0.65rem;
+  padding: 1px 5px;
+  border-radius: 4px;
+  margin-left: 6px;
+  vertical-align: middle;
+  font-weight: 600;
+}
+
+.notes {
+  margin-left: 4px;
+  cursor: help;
+  color: #a78bfa;
+  font-size: 0.75rem;
+}
+
+.bank {
+  color: #666;
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+.category {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 20px;
+  background: color-mix(in srgb, var(--clr) 12%, white);
+  color: var(--clr);
+  white-space: nowrap;
+}
+
+.right { text-align: right; }
+
+.amount {
+  font-weight: 600;
+  white-space: nowrap;
+  font-size: 0.9rem;
+}
+
+.menuCell {
+  width: 32px;
+  padding: 0 8px !important;
+}
+
+.menuWrap {
+  position: relative;
+}
+
+.menuBtn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.2rem;
+  color: #aaa;
+  padding: 2px 6px;
+  border-radius: 4px;
+  line-height: 1;
+  transition: all 0.15s;
+}
+
+.menuBtn:hover { background: #f3f4f6; color: #555; }
+
+.dropdown {
+  position: absolute;
+  right: 0;
+  top: 100%;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+  z-index: 50;
+  min-width: 120px;
+  overflow: hidden;
+}
+
+.deleteItem {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  padding: 10px 16px;
+  font-size: 0.875rem;
+  cursor: pointer;
+  color: #dc2626;
+  transition: background 0.1s;
+}
+
+.deleteItem:hover { background: #fef2f2; }
