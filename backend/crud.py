@@ -6,9 +6,11 @@ from uuid import UUID
 from sqlalchemy import func, and_
 from sqlalchemy.orm import Session
 
-from models import Transaction
-from schemas import TransactionCreate
+from models import Transaction, Statement
+from schemas import TransactionCreate, TransactionUpdate
 
+
+# ── Duplicate Detection ───────────────────────────────────────────────────────
 
 def is_duplicate(db: Session, bank_name: str, tx_date: date_type,
                  amount_mxn: float, description: str) -> bool:
@@ -22,6 +24,42 @@ def is_duplicate(db: Session, bank_name: str, tx_date: date_type,
     ).first()
     return existing is not None
 
+
+# ── Statements ────────────────────────────────────────────────────────────────
+
+def create_statement(db: Session, filename: str, bank_name: str = None,
+                     month: int = None, year: int = None,
+                     inserted: int = 0, ignored: int = 0) -> Statement:
+    s = Statement(
+        filename=filename,
+        bank_name=bank_name,
+        month=month,
+        year=year,
+        transactions_inserted=inserted,
+        transactions_ignored=ignored,
+    )
+    db.add(s)
+    db.commit()
+    db.refresh(s)
+    return s
+
+
+def get_statements(db: Session) -> list[Statement]:
+    return db.query(Statement).order_by(Statement.uploaded_at.desc()).all()
+
+
+def delete_statement(db: Session, statement_id: UUID) -> bool:
+    s = db.query(Statement).filter(Statement.id == statement_id).first()
+    if not s:
+        return False
+    # Delete all linked transactions
+    db.query(Transaction).filter(Transaction.statement_id == statement_id).delete()
+    db.delete(s)
+    db.commit()
+    return True
+
+
+# ── Transactions ──────────────────────────────────────────────────────────────
 
 def create_transaction_from_extracted(db: Session, tx_data: dict) -> Transaction:
     tx = Transaction(**tx_data)
@@ -48,6 +86,24 @@ def create_transaction_manual(db: Session, data: TransactionCreate) -> Transacti
         notes=data.notes,
     )
     db.add(tx)
+    db.commit()
+    db.refresh(tx)
+    return tx
+
+
+def update_transaction(db: Session, tx_id: UUID, data: TransactionUpdate) -> Optional[Transaction]:
+    tx = db.query(Transaction).filter(Transaction.id == tx_id).first()
+    if not tx:
+        return None
+    for field, value in data.model_dump(exclude_none=True).items():
+        setattr(tx, field, value)
+    # Recalculate month/year if date changed
+    if data.date:
+        tx.month = data.date.month
+        tx.year = data.date.year
+    # Sync amount_original if amount_mxn changed on a manual/MXN transaction
+    if data.amount_mxn and tx.currency_original == "MXN":
+        tx.amount_original = data.amount_mxn
     db.commit()
     db.refresh(tx)
     return tx

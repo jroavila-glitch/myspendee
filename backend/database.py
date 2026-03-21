@@ -28,5 +28,16 @@ def get_db():
 
 
 def init_db():
-    from models import Transaction  # noqa: F401
+    from models import Transaction, Statement  # noqa: F401
     Base.metadata.create_all(bind=engine)
+    _migrate()
+
+
+def _migrate():
+    """Add columns / constraints to existing tables without a full migration tool."""
+    with engine.connect() as conn:
+        # Add statement_id column to transactions if it doesn't exist yet
+        conn.execute(text(
+            "ALTER TABLE transactions ADD COLUMN IF NOT EXISTS statement_id UUID"
+        ))
+        conn.commit()

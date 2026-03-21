@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import Dashboard from './components/Dashboard.jsx'
 import Upload from './components/Upload.jsx'
+import Statements from './components/Statements.jsx'
 import styles from './App.module.css'
 
 export default function App() {
@@ -10,6 +11,10 @@ export default function App() {
   const handleUploadSuccess = () => {
     setRefreshKey(k => k + 1)
     setActiveTab('dashboard')
+  }
+
+  const handleStatementDeleted = () => {
+    setRefreshKey(k => k + 1)
   }
 
   return (
@@ -25,16 +30,25 @@ export default function App() {
               Dashboard
             </button>
             <button
+              className={`${styles.navBtn} ${activeTab === 'statements' ? styles.active : ''}`}
+              onClick={() => setActiveTab('statements')}
+            >
+              Statements
+            </button>
+            <button
               className={`${styles.navBtn} ${activeTab === 'upload' ? styles.active : ''}`}
               onClick={() => setActiveTab('upload')}
             >
-              Upload Statements
+              Upload
             </button>
           </nav>
         </div>
       </header>
       <main className={styles.main}>
         {activeTab === 'dashboard' && <Dashboard key={refreshKey} />}
+        {activeTab === 'statements' && (
+          <Statements key={refreshKey} onDeleted={handleStatementDeleted} />
+        )}
         {activeTab === 'upload' && <Upload onSuccess={handleUploadSuccess} />}
       </main>
     </div>

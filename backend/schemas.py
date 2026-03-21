@@ -28,12 +28,36 @@ class TransactionCreate(BaseModel):
     notes: Optional[str] = None
 
 
+class TransactionUpdate(BaseModel):
+    date: Optional[date] = None
+    description: Optional[str] = None
+    amount_mxn: Optional[Decimal] = None
+    category: Optional[str] = None
+    type: Optional[str] = None
+    bank_name: Optional[str] = None
+    notes: Optional[str] = None
+
+
 class TransactionOut(TransactionBase):
     id: UUID
     month: int
     year: int
     manually_added: bool
+    statement_id: Optional[UUID] = None
     created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class StatementOut(BaseModel):
+    id: UUID
+    filename: str
+    bank_name: Optional[str] = None
+    month: Optional[int] = None
+    year: Optional[int] = None
+    transactions_inserted: int
+    transactions_ignored: int
+    uploaded_at: datetime
 
     model_config = {"from_attributes": True}
 
@@ -64,3 +88,4 @@ class UploadResponse(BaseModel):
     duplicates_skipped: int
     ignored: int
     errors: list[str]
+    statement_id: Optional[UUID] = None

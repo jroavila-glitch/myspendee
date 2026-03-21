@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { createTransaction, getCategories } from '../api.js'
+import { createTransaction, updateTransaction, getCategories } from '../api.js'
 import styles from './AddTransactionModal.module.css'
 
 const BANKS = [
@@ -8,16 +8,24 @@ const BANKS = [
   'DolarApp EURc', 'DolarApp USDc', 'Other'
 ]
 
-export default function AddTransactionModal({ onClose, onSave }) {
+/**
+ * AddTransactionModal
+ * Props:
+ *   onClose       () => void
+ *   onSave        () => void
+ *   transaction   object | null — if provided, opens in edit mode
+ */
+export default function AddTransactionModal({ onClose, onSave, transaction }) {
+  const isEdit = Boolean(transaction)
   const [categories, setCategories] = useState({ income: [], expense: [] })
   const [form, setForm] = useState({
-    date: new Date().toISOString().split('T')[0],
-    description: '',
-    amount_mxn: '',
-    category: '',
-    type: 'expense',
-    bank_name: '',
-    notes: '',
+    date: transaction?.date ?? new Date().toISOString().split('T')[0],
+    description: transaction?.description ?? '',
+    amount_mxn: transaction?.amount_mxn != null ? String(Math.abs(Number(transaction.amount_mxn))) : '',
+    category: transaction?.category ?? '',
+    type: transaction?.type === 'income' ? 'income' : 'expense',
+    bank_name: transaction?.bank_name ?? '',
+    notes: transaction?.notes ?? '',
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
@@ -39,10 +47,15 @@ export default function AddTransactionModal({ onClose, onSave }) {
     }
     setLoading(true)
     try {
-      await createTransaction({ ...form, amount_mxn: parseFloat(form.amount_mxn) })
+      const payload = { ...form, amount_mxn: parseFloat(form.amount_mxn) }
+      if (isEdit) {
+        await updateTransaction(transaction.id, payload)
+      } else {
+        await createTransaction(payload)
+      }
       onSave()
     } catch (e) {
-      setError(e.response?.data?.detail || 'Failed to save transaction')
+      setError(e.response?.data?.detail || `Failed to ${isEdit ? 'update' : 'save'} transaction`)
     } finally {
       setLoading(false)
     }
@@ -52,7 +65,7 @@ export default function AddTransactionModal({ onClose, onSave }) {
     <div className={styles.overlay} onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className={styles.modal}>
         <div className={styles.header}>
-          <h2 className={styles.title}>Add Transaction</h2>
+          <h2 className={styles.title}>{isEdit ? 'Edit Transaction' : 'Add Transaction'}</h2>
           <button className={styles.closeBtn} onClick={onClose}>✕</button>
         </div>
 
@@ -112,7 +125,7 @@ export default function AddTransactionModal({ onClose, onSave }) {
           <div className={styles.actions}>
             <button type="button" className={styles.cancelBtn} onClick={onClose}>Cancel</button>
             <button type="submit" className={styles.saveBtn} disabled={loading}>
-              {loading ? 'Saving…' : 'Save Transaction'}
+              {loading ? (isEdit ? 'Saving…' : 'Saving…') : (isEdit ? 'Save Changes' : 'Save Transaction')}
             </button>
           </div>
         </form>

@@ -14,6 +14,8 @@ export const getTransactions = (params) => api.get('/transactions', { params })
 
 export const createTransaction = (data) => api.post('/transactions', data)
 
+export const updateTransaction = (id, data) => api.put(`/transactions/${id}`, data)
+
 export const deleteTransaction = (id) => api.delete(`/transactions/${id}`)
 
 export const getSummary = (month, year) => api.get('/summary', { params: { month, year } })
@@ -23,3 +25,7 @@ export const getBreakdown = (month, year) => api.get('/breakdown', { params: { m
 export const getBanks = () => api.get('/banks')
 
 export const getCategories = () => api.get('/categories')
+
+export const getStatements = () => api.get('/statements')
+
+export const deleteStatement = (id) => api.delete(`/statements/${id}`)

@@ -33,7 +33,9 @@ export default function Dashboard() {
   // Drilldown
   const [drillCategory, setDrillCategory] = useState(null)
 
+  // Modals
   const [showAddModal, setShowAddModal] = useState(false)
+  const [editingTx, setEditingTx] = useState(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -69,6 +71,19 @@ export default function Dashboard() {
   }
 
   const handleDelete = () => {
+    load()
+    if (drillCategory) {
+      getTransactions({ month, year, category: drillCategory.name, type: drillCategory.type })
+        .then(res => setDrillCategory(d => d ? { ...d, transactions: res.data } : null))
+    }
+  }
+
+  const handleEdit = (tx) => {
+    setEditingTx(tx)
+  }
+
+  const handleEditSave = () => {
+    setEditingTx(null)
     load()
     if (drillCategory) {
       getTransactions({ month, year, category: drillCategory.name, type: drillCategory.type })
@@ -185,7 +200,11 @@ export default function Dashboard() {
                 </h3>
                 <button className={styles.closeBtn} onClick={() => setDrillCategory(null)}>✕</button>
               </div>
-              <TransactionList transactions={drillCategory.transactions} onDelete={handleDelete} compact />
+              <TransactionList
+                transactions={drillCategory.transactions}
+                onDelete={handleDelete}
+                onEdit={handleEdit}
+              />
             </div>
           )}
 
@@ -198,14 +217,24 @@ export default function Dashboard() {
                   <span className={styles.txCount}> ({filteredTx.length})</span>
                 </h2>
               </div>
-              <TransactionList transactions={filteredTx} onDelete={handleDelete} />
+              <TransactionList transactions={filteredTx} onDelete={handleDelete} onEdit={handleEdit} />
             </>
           )}
         </div>
       </div>
 
+      {/* Add modal */}
       {showAddModal && (
         <AddTransactionModal onClose={() => setShowAddModal(false)} onSave={handleAdd} />
+      )}
+
+      {/* Edit modal */}
+      {editingTx && (
+        <AddTransactionModal
+          transaction={editingTx}
+          onClose={() => setEditingTx(null)}
+          onSave={handleEditSave}
+        />
       )}
     </div>
   )
