@@ -28,13 +28,14 @@ def classify(description: str, amount_mxn: Decimal, bank_name: str,
     amount = float(amount_mxn)
     bank = bank_name.lower()
 
-    def result(type_, category, notes=None, desc_override=None, divisor=None):
+    def result(type_, category, notes=None, desc_override=None, divisor=None, fixed_eur=None):
         return {
             "type": type_,
             "category": category,
             "notes": notes,
             "description_override": desc_override,
             "amount_divisor": divisor,
+            "fixed_eur_amount": fixed_eur,   # override amount to this many EUR (Almitas rule)
         }
 
     # ──────────────────────────────────────────────
@@ -167,11 +168,11 @@ def classify(description: str, amount_mxn: Decimal, bank_name: str,
     # 3. EXPENSE RULES
     # ──────────────────────────────────────────────
 
-    # DolarApp / ARQ Venta EURc → Almitas Inc Invest → Home (Rent), divide by 3
+    # Almitas Inc Invest → Home (Rent), fixed EUR 600 (shared flat — always this amount)
     if "almitas inc invest" in desc_norm:
-        return result("expense", "Home", "Rent — 1/3 of total (shared)",
+        return result("expense", "Home", "Rent — fixed EUR 600",
                       desc_override="Rent - " + description.strip(),
-                      divisor=3)
+                      fixed_eur=600)
 
     # Transport
     if re.search(r'\bbolt\b|bolt\.eu', desc):
@@ -286,10 +287,11 @@ def classify(description: str, amount_mxn: Decimal, bank_name: str,
     if "amazon" in desc or "amzn" in desc:
         return result("expense", "Home")
 
-    # Cleaning — match both "TRF P/ APARECIDA FERNANDA" and "TRF MB WAY P/ APARECIDA FERNANDA DA SILVA"
+    # Cleaning — APARECIDA FERNANDA (any variant), shared cost ÷3
     if "aparecida fernanda" in desc_norm:
-        return result("expense", "Home", "Cleaning service",
-                      desc_override="Cleaning - " + description.strip())
+        return result("expense", "Home", "Cleaning — 1/3 share",
+                      desc_override="Cleaning - " + description.strip(),
+                      divisor=3)
 
     # Healthcare — Fernando Alves
     if "trf mb way p/ fernando alves" in desc_norm or "fernando alves" in desc_norm:

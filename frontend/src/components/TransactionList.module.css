@@ -109,6 +109,14 @@
   font-size: 0.9rem;
 }
 
+.originalAmount {
+  font-size: 0.7rem;
+  color: #9ca3af;
+  margin-top: 2px;
+  white-space: nowrap;
+  font-weight: 400;
+}
+
 .menuCell {
   width: 32px;
   padding: 0 8px !important;
