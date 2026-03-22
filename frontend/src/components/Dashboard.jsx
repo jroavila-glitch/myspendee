@@ -204,6 +204,7 @@ export default function Dashboard() {
                 transactions={drillCategory.transactions}
                 onDelete={handleDelete}
                 onEdit={handleEdit}
+                onRefresh={handleDelete}
               />
             </div>
           )}
@@ -217,7 +218,7 @@ export default function Dashboard() {
                   <span className={styles.txCount}> ({filteredTx.length})</span>
                 </h2>
               </div>
-              <TransactionList transactions={filteredTx} onDelete={handleDelete} onEdit={handleEdit} />
+              <TransactionList transactions={filteredTx} onDelete={handleDelete} onEdit={handleEdit} onRefresh={load} />
             </>
           )}
         </div>

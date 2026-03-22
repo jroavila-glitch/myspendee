@@ -32,14 +32,15 @@
   border-bottom: 1px solid #e5e7eb;
 }
 
-.row {
-  transition: background 0.1s;
-}
+/* ── Rows ──────────────────────────────────────────────────────────── */
 
+.row { transition: background 0.1s; }
 .row:hover { background: #fafafa; }
+.rowSelected { background: #eff6ff !important; }
+.rowSelected:hover { background: #dbeafe !important; }
 
 .row td {
-  padding: 11px 14px;
+  padding: 10px 14px;
   border-bottom: 1px solid #f3f4f6;
   color: #333;
   vertical-align: middle;
@@ -47,15 +48,28 @@
 
 .row:last-child td { border-bottom: none; }
 
+/* ── Columns ───────────────────────────────────────────────────────── */
+
+.checkCol {
+  width: 36px;
+  padding: 0 8px 0 14px !important;
+  text-align: center;
+}
+
+.checkCol input[type="checkbox"] {
+  cursor: pointer;
+  width: 15px;
+  height: 15px;
+  accent-color: #6366f1;
+}
+
 .date {
   white-space: nowrap;
   color: #666;
   font-size: 0.8rem;
 }
 
-.desc {
-  max-width: 260px;
-}
+.desc { max-width: 220px; }
 
 .descText {
   display: block;
@@ -75,13 +89,6 @@
   margin-left: 6px;
   vertical-align: middle;
   font-weight: 600;
-}
-
-.notes {
-  margin-left: 4px;
-  cursor: help;
-  color: #a78bfa;
-  font-size: 0.75rem;
 }
 
 .bank {
@@ -107,6 +114,7 @@
   font-weight: 600;
   white-space: nowrap;
   font-size: 0.9rem;
+  display: block;
 }
 
 .originalAmount {
@@ -114,17 +122,54 @@
   color: #9ca3af;
   margin-top: 2px;
   white-space: nowrap;
-  font-weight: 400;
 }
+
+/* ── Inline notes input ────────────────────────────────────────────── */
+
+.notesCol {
+  min-width: 140px;
+  max-width: 200px;
+}
+
+.notesInput {
+  width: 100%;
+  font-size: 0.78rem;
+  color: #555;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  padding: 3px 6px;
+  background: transparent;
+  outline: none;
+  transition: border-color 0.15s, background 0.15s;
+  box-sizing: border-box;
+}
+
+.notesInput:hover {
+  border-color: #d1d5db;
+  background: #f9fafb;
+}
+
+.notesInput:focus {
+  border-color: #6366f1;
+  background: #fff;
+  box-shadow: 0 0 0 2px rgba(99,102,241,0.15);
+}
+
+.notesInput::placeholder { color: #c4c4c4; font-style: italic; }
+
+.notesSaving {
+  border-color: #a5b4fc !important;
+  background: #eef2ff !important;
+}
+
+/* ── 3-dot menu ────────────────────────────────────────────────────── */
 
 .menuCell {
   width: 32px;
   padding: 0 8px !important;
 }
 
-.menuWrap {
-  position: relative;
-}
+.menuWrap { position: relative; }
 
 .menuBtn {
   background: none;
@@ -168,11 +213,7 @@
 
 .editItem:hover { background: #f3f4f6; }
 
-.divider {
-  height: 1px;
-  background: #f3f4f6;
-  margin: 0;
-}
+.divider { height: 1px; background: #f3f4f6; }
 
 .deleteItem {
   display: block;
@@ -189,3 +230,79 @@
 
 .deleteItem:hover { background: #fef2f2; }
 .deleteItem:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* ── Floating bulk-action bar ──────────────────────────────────────── */
+
+.bulkBar {
+  position: fixed;
+  bottom: 28px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1e1b4b;
+  color: #fff;
+  border-radius: 14px;
+  padding: 12px 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.30);
+  z-index: 200;
+  animation: slideUp 0.2s ease;
+  white-space: nowrap;
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateX(-50%) translateY(12px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+.bulkCount {
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding-right: 6px;
+  border-right: 1px solid rgba(255,255,255,0.2);
+  margin-right: 4px;
+}
+
+.bulkSelect {
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.25);
+  color: #fff;
+  border-radius: 7px;
+  padding: 6px 10px;
+  font-size: 0.82rem;
+  cursor: pointer;
+  outline: none;
+  min-width: 155px;
+}
+
+.bulkSelect option { background: #1e1b4b; color: #fff; }
+.bulkSelect:focus { border-color: #a5b4fc; }
+
+.bulkApply {
+  background: #6366f1;
+  color: #fff;
+  border: none;
+  border-radius: 7px;
+  padding: 7px 18px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.bulkApply:hover:not(:disabled) { background: #4f46e5; }
+.bulkApply:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.bulkCancel {
+  background: transparent;
+  color: rgba(255,255,255,0.7);
+  border: 1px solid rgba(255,255,255,0.25);
+  border-radius: 7px;
+  padding: 7px 14px;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.bulkCancel:hover { background: rgba(255,255,255,0.1); color: #fff; }

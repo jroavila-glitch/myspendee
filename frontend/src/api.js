@@ -26,6 +26,9 @@ export const getBanks = () => api.get('/banks')
 
 export const getCategories = () => api.get('/categories')
 
+export const bulkUpdateTransactions = (ids, fields) =>
+  api.post('/transactions/bulk-update', { ids, ...fields })
+
 export const getStatements = () => api.get('/statements')
 
 export const deleteStatement = (id) => api.delete(`/statements/${id}`)

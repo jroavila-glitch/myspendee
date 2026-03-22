@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from database import get_db, init_db
 from schemas import (
     TransactionOut, TransactionCreate, TransactionUpdate,
+    BulkUpdateRequest, BulkUpdateResponse,
     SummaryOut, BreakdownOut, UploadResponse, StatementOut
 )
 import crud
@@ -150,6 +151,19 @@ def edit_transaction(tx_id: UUID, data: TransactionUpdate, db: Session = Depends
     if not tx:
         raise HTTPException(status_code=404, detail="Transaction not found")
     return tx
+
+
+@app.post("/transactions/bulk-update", response_model=BulkUpdateResponse)
+def bulk_update(data: BulkUpdateRequest, db: Session = Depends(get_db)):
+    updates = {}
+    if data.category is not None:
+        updates["category"] = data.category
+    if data.type is not None:
+        updates["type"] = data.type
+    if data.notes is not None:
+        updates["notes"] = data.notes
+    count = crud.bulk_update_transactions(db, [str(i) for i in data.ids], updates)
+    return BulkUpdateResponse(updated=count)
 
 
 @app.delete("/transactions/{tx_id}", status_code=204)

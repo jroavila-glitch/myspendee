@@ -200,6 +200,19 @@ def delete_transaction(db: Session, tx_id: UUID) -> bool:
     return True
 
 
+def bulk_update_transactions(db: Session, ids: list, updates: dict) -> int:
+    """Update category/type/notes on a list of transaction IDs. Returns count updated."""
+    if not ids or not updates:
+        return 0
+    txs = db.query(Transaction).filter(Transaction.id.in_(ids)).all()
+    for tx in txs:
+        for field, value in updates.items():
+            if value is not None:
+                setattr(tx, field, value)
+    db.commit()
+    return len(txs)
+
+
 def get_banks(db: Session) -> list[str]:
     rows = db.query(Transaction.bank_name).distinct().order_by(Transaction.bank_name).all()
     return [r[0] for r in rows]

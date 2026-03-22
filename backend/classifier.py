@@ -194,6 +194,7 @@ def classify(description: str, amount_mxn: Decimal, bank_name: str,
         "fauna e flora", "loja saldanha", "claudio francisco be",
         "ma duque loule", "enjoy value", "zhang yuemei",
         "nyxkvending", "nyx*kvending", "nyx kvending",
+        "pandorca", "panorca",
     ]
     for kw in food_keywords:
         if kw in desc or kw in desc_norm:
@@ -201,6 +202,11 @@ def classify(description: str, amount_mxn: Decimal, bank_name: str,
 
     if "sumup *" in desc or "sumup*" in desc:
         return result("expense", "Food & Drink", "SumUp merchant")
+
+    # Generic café/coffee shop catch — after specific keywords to avoid double-matching
+    if re.search(r'\bcaf[eé]\b|\bcaff[eè]\b', desc, re.IGNORECASE) or \
+       re.search(r'\bcaf[eé]\b|\bcaff[eè]\b', desc_norm, re.IGNORECASE):
+        return result("expense", "Food & Drink")
 
     # Entertainment
     if "cinema" in desc or "uci cinemas" in desc:
@@ -221,8 +227,10 @@ def classify(description: str, amount_mxn: Decimal, bank_name: str,
         return result("expense", "IG Ro Project")
     if "google workspace" in desc or "google *workspace" in desc:
         return result("expense", "IG Ro Project")
+
+    # Perenniam Agency (expense) — Calendly moved here from IG Ro Project
     if "calendly" in desc:
-        return result("expense", "IG Ro Project")
+        return result("expense", "Perenniam Agency")
 
     # Apple.Com/Bill by amount — with description overrides
     if "apple.com/bill" in desc or "apple.com" in desc:
@@ -278,9 +286,9 @@ def classify(description: str, amount_mxn: Decimal, bank_name: str,
     if "el corte ingles" in desc_norm or "el corte inglés" in desc:
         return result("expense", "Groceries")
 
-    grocery_keywords = ["continente", "pingo doce", "celeiro", "gleba"]
+    grocery_keywords = ["continente", "pingo doce", "celeiro", "gleba", "lidl"]
     for kw in grocery_keywords:
-        if kw in desc:
+        if kw in desc or kw in desc_norm:
             return result("expense", "Groceries")
 
     # Home
@@ -326,6 +334,10 @@ def classify(description: str, amount_mxn: Decimal, bank_name: str,
         "iva por intereses", "iva sobre comisiones", "iva interes",
         "interes exento", "interes gravable", "intereses",
         "com.man.conta pacote programa prestige", "imposto selo",
+        "comision administracion tarjeta titular",
+        "iva comision administracion",
+        "comision cobrada",
+        "iva comision cobrada",
     ]
     for kw in bills_keywords:
         if kw in desc or kw in desc_norm:

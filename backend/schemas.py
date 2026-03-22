@@ -84,6 +84,17 @@ class BreakdownOut(BaseModel):
     expenses: list[CategoryBreakdown]
 
 
+class BulkUpdateRequest(BaseModel):
+    ids: list[UUID]
+    category: Optional[str] = None
+    type: Optional[str] = None
+    notes: Optional[str] = None
+
+
+class BulkUpdateResponse(BaseModel):
+    updated: int
+
+
 class UploadResponse(BaseModel):
     inserted: int
     duplicates_skipped: int
