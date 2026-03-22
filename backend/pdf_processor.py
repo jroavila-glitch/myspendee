@@ -27,8 +27,14 @@ BANK ACCOUNTS AND THEIR LOGIC:
 - Oro Banamex Credit (MXN, Credit): Purchases = direction "out", payments to card = direction "in"
 - Costco Banamex Credit (MXN, Credit): Purchases = direction "out", payments to card = direction "in"
 - HSBC 2Now Credit (MXN, Credit): Purchases = direction "out", payments to card = direction "in"
-- DolarApp EURc (EUR, Debit): Compra EURc = direction "in"; Venta EURc = direction "out"
-- DolarApp USDc (USD, Debit): Compra USDc = direction "in"; Venta USDc = direction "out"
+- DolarApp EURc (EUR, Debit): Compra EURc = direction "in" and currency MUST be "EUR"; Venta EURc = direction "out" and currency MUST be "EUR"
+- DolarApp USDc (USD, Debit): Compra USDc = direction "in" and currency MUST be "USD"; Venta USDc = direction "out" and currency MUST be "USD"
+
+CRITICAL CURRENCY RULE FOR DOLARAPP:
+- If the bank is "DolarApp USDc": ALL transactions MUST have currency = "USD"
+- If the bank is "DolarApp EURc": ALL transactions MUST have currency = "EUR"
+- NEVER return currency = "EUR" for a DolarApp USDc statement
+- NEVER return currency = "USD" for a DolarApp EURc statement
 
 INSTRUCTIONS:
 1. Identify the bank name and statement period (month/year).
@@ -37,10 +43,10 @@ INSTRUCTIONS:
    - date: ISO format (YYYY-MM-DD)
    - description: exact raw text from the statement (preserve original casing and punctuation)
    - amount: positive number (absolute value)
-   - currency: the currency of the amount (MXN, EUR, USD)
+   - currency: the currency of the amount (MXN, EUR, USD) — follow the bank-specific currency rules above
    - direction: "in" (money received/credited) or "out" (money spent/debited)
-   - exchange_rate: if the statement shows a TC (tipo de cambio) or exchange rate next to the transaction, include it; otherwise null
-   - notes: optional extra info — use this for installment info (see Rappi rule below)
+   - exchange_rate: if the statement shows a TC (tipo de cambio) or exchange rate next to the transaction, include it as a number; otherwise null
+   - notes: optional extra info — REQUIRED for Rappi installments (see rule below)
 
 4. For Mexican credit cards (Banamex, HSBC, Rappi, Nu Credit): purchases are always direction "out". Payment entries like "SU PAGO GRACIAS" or "PAGO INTERBANCARIO" should be extracted with direction "in".
 
@@ -48,11 +54,16 @@ INSTRUCTIONS:
 
 6. RAPPI "COMPRAS A MESES" (installment purchases) — CRITICAL RULE:
    Rappi statements contain a section called "Compras a meses" listing installment purchases.
-   - Do NOT use the "Monto original" column for the amount.
-   - Instead use the "Mensualidad" column (the monthly installment amount).
-   - Extract the installment number from the "# de Mensualidad" column (e.g. "2 de 12" means payment 2 of 12).
-   - Set notes = "Installment 2/12" (replace numbers with the actual values from the statement).
-   - Set direction = "out" for all installment entries.
+   THIS SECTION IS SEPARATE from the regular transactions section.
+   For transactions in the "Compras a meses" section you MUST:
+   a) Use the "Mensualidad" column value as the amount — NOT the "Monto original" column.
+      Example: If Monto original = $12,000 and Mensualidad = $333.33, use 333.33.
+   b) Extract the installment number from the "# de Mensualidad" column.
+      Example: "2 de 12" means current installment 2 of 12 total.
+      Format the notes field as: "Installment 2/12"
+      Example: "21 de 48" → notes = "Installment 21/48"
+   c) Set direction = "out" for all installment entries.
+   d) IMPORTANT: Output ONE transaction row per installment entry using the Mensualidad amount.
 
 7. IGNORE classification is handled server-side — still extract ALL transactions including payments, internal transfers, etc.
 
@@ -91,6 +102,41 @@ def extract_json(text: str) -> dict:
         text = re.sub(r"^```[a-z]*\n?", "", text)
         text = re.sub(r"\n?```$", "", text)
     return json.loads(text)
+
+
+def _fix_currency_for_bank(currency: str, bank_name: str) -> str:
+    """
+    Override currency based on bank name to handle cases where Claude
+    returns the wrong currency (e.g. EUR for DolarApp USDc).
+    """
+    bank_lower = bank_name.lower()
+    if "usdc" in bank_lower:
+        return "USD"
+    if "eurc" in bank_lower:
+        return "EUR"
+    return currency
+
+
+def _extract_installment_from_notes_or_desc(notes: str | None, description: str) -> str | None:
+    """
+    Parse installment pattern 'N de M' or 'N/M' from notes or description.
+    Returns formatted string like 'Installment 2/12' or None.
+    """
+    # Check notes first, then description
+    for text in [notes, description]:
+        if not text:
+            continue
+        # Match patterns like "2 de 12", "02 de 12", "21 de 48"
+        m = re.search(r'(\d+)\s+de\s+(\d+)', text, re.IGNORECASE)
+        if m:
+            current = int(m.group(1))
+            total = int(m.group(2))
+            return f"Installment {current}/{total}"
+        # Also match "2/12" if already formatted
+        m2 = re.search(r'[Ii]nstallment\s+(\d+)/(\d+)', text)
+        if m2:
+            return f"Installment {m2.group(1)}/{m2.group(2)}"
+    return None
 
 
 def process_pdf(pdf_bytes: bytes) -> tuple[list[dict], str, int, int]:
@@ -150,6 +196,9 @@ def process_pdf(pdf_bytes: bytes) -> tuple[list[dict], str, int, int]:
 
             amount_original = Decimal(str(raw_amount))
 
+            # Fix currency based on bank name (handles DolarApp USDc/EURc misclassification)
+            currency = _fix_currency_for_bank(currency, bank_name)
+
             # Convert to MXN
             if currency == "MXN":
                 amount_mxn = amount_original
@@ -161,6 +210,17 @@ def process_pdf(pdf_bytes: bytes) -> tuple[list[dict], str, int, int]:
                 fallback = {"EUR": Decimal("21.5"), "USD": Decimal("20.0")}
                 rate = fallback.get(currency, Decimal("20.0"))
                 amount_mxn = amount_original * rate
+
+            # Rappi installment fallback: if bank is Rappi and notes missing, try to
+            # extract installment info from description (e.g. "001 de 036" pattern)
+            is_rappi = "rappi" in bank_name.lower()
+            if is_rappi and not extraction_notes:
+                extraction_notes = _extract_installment_from_notes_or_desc(extraction_notes, description)
+            elif is_rappi and extraction_notes:
+                # Normalize whatever Claude returned into "Installment N/M" format
+                parsed = _extract_installment_from_notes_or_desc(extraction_notes, description)
+                if parsed:
+                    extraction_notes = parsed
 
             # Classify
             classification = classify(

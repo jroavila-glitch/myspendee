@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { createTransaction, updateTransaction, getCategories } from '../api.js'
 import styles from './AddTransactionModal.module.css'
 
-const BANKS = [
+const PRESET_BANKS = [
   'Revolut', 'Millennium BCP', 'Nu Debit', 'Nu Credit',
   'Rappi Credit', 'Oro Banamex', 'Costco Banamex', 'HSBC 2Now',
   'DolarApp EURc', 'DolarApp USDc', 'Other'
@@ -34,9 +34,23 @@ export default function AddTransactionModal({ onClose, onSave, transaction }) {
     getCategories().then(res => setCategories(res.data)).catch(() => {})
   }, [])
 
+  // Build bank list: always include the transaction's current bank even if not in preset list
+  const bankOptions = isEdit && form.bank_name && !PRESET_BANKS.includes(form.bank_name)
+    ? [form.bank_name, ...PRESET_BANKS]
+    : PRESET_BANKS
+
   const availableCategories = categories[form.type] || []
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v, ...(k === 'type' ? { category: '' } : {}) }))
+
+  const formatError = (err) => {
+    if (!err) return null
+    if (Array.isArray(err)) {
+      return err.map(e => e.msg || JSON.stringify(e)).join('; ')
+    }
+    if (typeof err === 'object') return JSON.stringify(err)
+    return String(err)
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -47,15 +61,24 @@ export default function AddTransactionModal({ onClose, onSave, transaction }) {
     }
     setLoading(true)
     try {
-      const payload = { ...form, amount_mxn: parseFloat(form.amount_mxn) }
+      const payload = {
+        date: form.date,
+        description: form.description,
+        amount_mxn: parseFloat(form.amount_mxn),
+        category: form.category,
+        type: form.type,
+        bank_name: form.bank_name,
+        notes: form.notes || null,   // send null instead of "" to avoid schema issues
+      }
       if (isEdit) {
         await updateTransaction(transaction.id, payload)
       } else {
         await createTransaction(payload)
       }
       onSave()
-    } catch (e) {
-      setError(e.response?.data?.detail || `Failed to ${isEdit ? 'update' : 'save'} transaction`)
+    } catch (err) {
+      const detail = err.response?.data?.detail
+      setError(formatError(detail) || `Failed to ${isEdit ? 'update' : 'save'} transaction`)
     } finally {
       setLoading(false)
     }
@@ -101,7 +124,7 @@ export default function AddTransactionModal({ onClose, onSave, transaction }) {
               <label className={styles.label}>Bank *</label>
               <select className={styles.input} value={form.bank_name} onChange={e => set('bank_name', e.target.value)} required>
                 <option value="">Select bank…</option>
-                {BANKS.map(b => <option key={b} value={b}>{b}</option>)}
+                {bankOptions.map(b => <option key={b} value={b}>{b}</option>)}
               </select>
             </div>
           </div>
@@ -125,7 +148,7 @@ export default function AddTransactionModal({ onClose, onSave, transaction }) {
           <div className={styles.actions}>
             <button type="button" className={styles.cancelBtn} onClick={onClose}>Cancel</button>
             <button type="submit" className={styles.saveBtn} disabled={loading}>
-              {loading ? (isEdit ? 'Saving…' : 'Saving…') : (isEdit ? 'Save Changes' : 'Save Transaction')}
+              {loading ? 'Saving…' : isEdit ? 'Save Changes' : 'Save Transaction'}
             </button>
           </div>
         </form>

@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date as _Date, datetime
 from decimal import Decimal
 from typing import Optional
 from uuid import UUID
@@ -6,7 +6,7 @@ from pydantic import BaseModel
 
 
 class TransactionBase(BaseModel):
-    date: date
+    date: _Date
     description: str
     amount_original: Decimal
     currency_original: str = "MXN"
@@ -19,7 +19,7 @@ class TransactionBase(BaseModel):
 
 
 class TransactionCreate(BaseModel):
-    date: date
+    date: _Date
     description: str
     amount_mxn: Decimal
     category: str
@@ -29,7 +29,8 @@ class TransactionCreate(BaseModel):
 
 
 class TransactionUpdate(BaseModel):
-    date: Optional[date] = None
+    # Use _Date (= datetime.date) to avoid Pydantic v2 field-name-shadows-type bug
+    date: Optional[_Date] = None
     description: Optional[str] = None
     amount_mxn: Optional[Decimal] = None
     category: Optional[str] = None

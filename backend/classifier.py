@@ -12,12 +12,19 @@ Return dict keys:
 """
 
 import re
+import unicodedata
 from decimal import Decimal
+
+
+def _norm(s: str) -> str:
+    """Lowercase + strip accents so é/ê/è all match e, ó matches o, etc."""
+    return unicodedata.normalize("NFKD", s.lower()).encode("ascii", "ignore").decode("ascii")
 
 
 def classify(description: str, amount_mxn: Decimal, bank_name: str,
              direction: str, currency_original: str) -> dict:
     desc = description.lower().strip()
+    desc_norm = _norm(description)          # accent-stripped lowercase for matching
     amount = float(amount_mxn)
     bank = bank_name.lower()
 
@@ -41,9 +48,8 @@ def classify(description: str, amount_mxn: Decimal, bank_name: str,
         "sebastian wohler",
         "paul pitterlein",
         "jose rodrigo avila neira",
-        # Any "pago a tu tarjeta de crédito" (not just Nu)
-        "pago a tu tarjeta de crédito",
-        "pago a tu tarjeta de credito",
+        # Any "pago a tu tarjeta de crédito / credito"
+        "pago a tu tarjeta de cr",        # covers both é and e variants
         "sent from dolarapp",
         "patricia neira",
         "arturo pastrana",
@@ -51,9 +57,10 @@ def classify(description: str, amount_mxn: Decimal, bank_name: str,
         "exchanged to eur",
         "pago a tarjeta",
         "pago recibido",
+        "pago por spei",
     ]
     for pattern in ignore_patterns:
-        if pattern in desc:
+        if pattern in desc or pattern in desc_norm:
             return result("ignored", "ignored", f"Auto-ignored: matched '{pattern}'")
 
     # Amazon $149 MXN → ignore
@@ -64,17 +71,28 @@ def classify(description: str, amount_mxn: Decimal, bank_name: str,
     if "dolarapp" in bank and "venta usdc" in desc and "jose rodrigo avila neira" in desc:
         return result("ignored", "ignored", "Auto-ignored: DolarApp internal transfer")
 
-    # DolarApp/EURc commissions → ignored (not Bills/Fees)
-    if "compra eurc comisión" in desc or "compra eurc comision" in desc:
-        return result("ignored", "ignored", "Auto-ignored: DolarApp EURc commission")
-    if "venta eurc comisión" in desc or "venta eurc comision" in desc:
-        return result("ignored", "ignored", "Auto-ignored: DolarApp EURc commission")
-    if "compra usdc comisión" in desc or "compra usdc comision" in desc:
-        return result("ignored", "ignored", "Auto-ignored: DolarApp USDc commission")
+    # DolarApp/EURc & USDc commissions → ignored
+    commission_ignores = [
+        "compra eurc comisi",   # covers comisión / comision
+        "venta eurc comisi",
+        "compra usdc comisi",
+        "venta usdc comisi",
+    ]
+    for pat in commission_ignores:
+        if pat in desc_norm:
+            return result("ignored", "ignored", f"Auto-ignored: commission '{pat}'")
 
     # DIFERIMIENTO DE SALDO APP MOBILE → ignored
-    if "diferimiento de saldo app mobile" in desc:
+    if "diferimiento de saldo app mobile" in desc_norm:
         return result("ignored", "ignored", "Auto-ignored: Diferimiento de saldo app mobile")
+
+    # Conversión USDc a EURc → ignored (internal wallet conversion)
+    if "conversion usdc a eurc" in desc_norm or "conversión usdc a eurc" in desc:
+        return result("ignored", "ignored", "Auto-ignored: USDc→EURc internal conversion")
+
+    # TRF P/ Bridge Building → ignored (internal transfer)
+    if "trf p/ bridge building" in desc_norm or "bridge building" in desc_norm:
+        return result("ignored", "ignored", "Auto-ignored: Bridge Building transfer")
 
     # Credit card payment entries
     credit_payment_patterns = [
@@ -84,7 +102,7 @@ def classify(description: str, amount_mxn: Decimal, bank_name: str,
         "card payment",
     ]
     for pattern in credit_payment_patterns:
-        if pattern in desc:
+        if pattern in desc or pattern in desc_norm:
             return result("ignored", "ignored", f"Auto-ignored: credit card payment '{pattern}'")
 
     # ──────────────────────────────────────────────
@@ -94,25 +112,25 @@ def classify(description: str, amount_mxn: Decimal, bank_name: str,
     if "contini solutions" in desc:
         return result("income", "Perenniam Agency")
 
-    if "filip marek" in desc:
+    if "filip marek" in desc_norm:
         return result("income", "Tennis Lessons")
 
     # Rappi BONIFICACIÓN CON CASHBACK → specific description
-    if ("bonificación con cashback" in desc or "bonificacion con cashback" in desc) and "rappi" in bank:
+    if ("bonificaci" in desc_norm and "cashback" in desc_norm) and "rappi" in bank:
         return result("income", "Credit Cards Cashback",
                       desc_override="RappiCard - BONIFICACIÓN CON CASHBACK")
 
-    if "bonificación con cashback" in desc or "bonificacion con cashback" in desc:
+    if "bonificaci" in desc_norm and "cashback" in desc_norm:
         return result("income", "Credit Cards Cashback")
 
-    if "iva bonificación con cashback" in desc or "iva bonificacion con cashback" in desc:
+    if "iva bonificaci" in desc_norm and "cashback" in desc_norm:
         return result("income", "Credit Cards Cashback")
 
     if "c combinator mexico" in desc or "honos" in desc:
         return result("income", "Other", "C Combinator / Honos deposit")
 
-    # Revolut transfer from — Goncalo (shared rent) → Home, divide by 3
-    if "revolut" in bank and "goncalo de campos melo" in desc:
+    # Revolut transfer from — Goncalo (shared rent/utilities) → Home, divide by 3
+    if "revolut" in bank and "goncalo de campos melo" in desc_norm:
         return result("expense", "Home", "Shared rent/utilities — 1/3 of total", divisor=3)
 
     # Revolut transfer from (generic income)
@@ -130,11 +148,11 @@ def classify(description: str, amount_mxn: Decimal, bank_name: str,
             return result("income", "Tennis Lessons")
 
     # DolarApp Compra USDc from Contini
-    if "dolarapp" in bank and "compra usdc" in desc and "contini" in desc:
+    if "dolarapp" in bank and "compra usdc" in desc and "contini" in desc_norm:
         return result("income", "Perenniam Agency")
 
     # DolarApp Compra EURc from Filip Marek
-    if "dolarapp" in bank and "compra eurc" in desc and "filip marek" in desc:
+    if "dolarapp" in bank and "compra eurc" in desc and "filip marek" in desc_norm:
         return result("income", "Tennis Lessons")
 
     # DolarApp Compra EURc generic
@@ -150,7 +168,7 @@ def classify(description: str, amount_mxn: Decimal, bank_name: str,
     # ──────────────────────────────────────────────
 
     # DolarApp / ARQ Venta EURc → Almitas Inc Invest → Home (Rent), divide by 3
-    if "almitas inc invest" in desc:
+    if "almitas inc invest" in desc_norm:
         return result("expense", "Home", "Rent — 1/3 of total (shared)",
                       desc_override="Rent - " + description.strip(),
                       divisor=3)
@@ -174,13 +192,13 @@ def classify(description: str, amount_mxn: Decimal, bank_name: str,
         "shifu ramen", "jncquoi asia", "street chow", "temas medievais",
         "fauna e flora", "loja saldanha", "claudio francisco be",
         "ma duque loule", "enjoy value", "zhang yuemei",
-        "nyxkvending", "nyx*kvending",  # moved from Other → Food & Drink
+        "nyxkvending", "nyx*kvending", "nyx kvending",
     ]
     for kw in food_keywords:
-        if kw in desc:
+        if kw in desc or kw in desc_norm:
             return result("expense", "Food & Drink")
 
-    if "sumup *" in desc:
+    if "sumup *" in desc or "sumup*" in desc:
         return result("expense", "Food & Drink", "SumUp merchant")
 
     # Entertainment
@@ -220,10 +238,12 @@ def classify(description: str, amount_mxn: Decimal, bank_name: str,
                 return result("expense", cat, "Apple subscription", desc_override=desc_ov)
         return result("expense", "Phone/Tech", "Apple subscription")
 
-    # Perenniam Agency (expense) — PADDLE.NET moved here from IG Ro Project
+    # Perenniam Agency (expense)
     if "highlevel agency sub" in desc or "highlevel" in desc:
         return result("expense", "Perenniam Agency")
-    if "paddle.net* elfsight" in desc or "paddle.net*elfsight" in desc or "elfsight" in desc:
+    if "paddle.net" in desc and ("elfsight" in desc):
+        return result("expense", "Perenniam Agency")
+    if "elfsight" in desc:
         return result("expense", "Perenniam Agency")
 
     # Phone/Tech
@@ -238,12 +258,23 @@ def classify(description: str, amount_mxn: Decimal, bank_name: str,
     if "t1 telcel" in desc or "telcel vps" in desc:
         return result("expense", "Phone/Tech")
 
+    # MACSTORE CIB III → Phone/Tech + extract installment from description
+    if "macstore cib" in desc_norm:
+        # Try to extract installment pattern e.g. "001 de 036" or "001 DE 036"
+        m = re.search(r'(\d+)\s+de\s+(\d+)', desc, re.IGNORECASE)
+        install_note = None
+        if m:
+            current = int(m.group(1))
+            total = int(m.group(2))
+            install_note = f"Installment {current}/{total}"
+        return result("expense", "Phone/Tech", install_note)
+
     # Groceries
     if "pagos fijos" in desc:
         return result("expense", "Groceries")
-    if "diferimiento de saldo" in desc:
+    if "diferimiento de saldo" in desc_norm:
         return result("expense", "Groceries")
-    if "el corte ingles" in desc or "el corte inglés" in desc:
+    if "el corte ingles" in desc_norm or "el corte inglés" in desc:
         return result("expense", "Groceries")
 
     grocery_keywords = ["continente", "pingo doce", "celeiro", "gleba"]
@@ -254,24 +285,34 @@ def classify(description: str, amount_mxn: Decimal, bank_name: str,
     # Home
     if "amazon" in desc or "amzn" in desc:
         return result("expense", "Home")
-    if "trf p/ aparecida fernanda" in desc:
+
+    # Cleaning — match both "TRF P/ APARECIDA FERNANDA" and "TRF MB WAY P/ APARECIDA FERNANDA DA SILVA"
+    if "aparecida fernanda" in desc_norm:
         return result("expense", "Home", "Cleaning service",
                       desc_override="Cleaning - " + description.strip())
-    if "trf mb way p/ fernando alves" in desc:
-        return result("expense", "Home", "Utility payment")
-    if "trf. p/o ines gardete lemos" in desc or "trf p/o ines gardete lemos" in desc:
+
+    # Healthcare — Fernando Alves
+    if "trf mb way p/ fernando alves" in desc_norm or "fernando alves" in desc_norm:
+        return result("expense", "Healthcare", "Healthcare / pharmacy payment")
+
+    # Brian — Inês Gardete Lemos (handles accented ê and plain e)
+    if "ines gardete lemos" in desc_norm or "in\u00eas gardete lemos" in desc:
         return result("expense", "Home", "Brian — shared home expense",
                       desc_override="Brian - " + description.strip())
 
-    # Tennis
+    # Tennis — Monsanto / Camara Lisboa (must come before generic tennis_keywords)
+    if "camara lisboa" in desc_norm:
+        return result("expense", "Tennis", None,
+                      desc_override="Monsanto - " + description.strip())
+
     tennis_keywords = ["tennis shop", "decathlon", "clube internacional",
-                       "camara lisboa", "tennis point", "tp* tennis-point"]
+                       "tennis point", "tp* tennis-point"]
     for kw in tennis_keywords:
-        if kw in desc:
+        if kw in desc or kw in desc_norm:
             return result("expense", "Tennis")
 
     # Gym
-    if "club7" in desc or "clube vii" in desc:
+    if "club7" in desc or "clube vii" in desc_norm:
         return result("expense", "Gym")
 
     # Healthcare
@@ -285,7 +326,7 @@ def classify(description: str, amount_mxn: Decimal, bank_name: str,
         "com.man.conta pacote programa prestige", "imposto selo",
     ]
     for kw in bills_keywords:
-        if kw in desc:
+        if kw in desc or kw in desc_norm:
             return result("expense", "Bills/Fees")
 
     # Visa Portugal
@@ -298,8 +339,6 @@ def classify(description: str, amount_mxn: Decimal, bank_name: str,
 
     # Other
     if "fundednext" in desc:
-        return result("expense", "Other")
-    if "trf p/ bridge building" in desc:
         return result("expense", "Other")
 
     # ──────────────────────────────────────────────
