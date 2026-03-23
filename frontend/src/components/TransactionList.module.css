@@ -1,8 +1,11 @@
+/* ── Container ─────────────────────────────────────────────────────────────── */
+
 .container {
   background: #fff;
   border: 1px solid #e5e7eb;
   border-radius: 12px;
-  overflow: hidden;
+  /* NO overflow:hidden — that clips the portal dropdown */
+  /* Rounded corners handled via first/last-child selectors below */
 }
 
 .empty {
@@ -15,10 +18,14 @@
   border-radius: 12px;
 }
 
+/* ── Table ─────────────────────────────────────────────────────────────────── */
+
 .table {
   width: 100%;
   border-collapse: collapse;
   font-size: 0.875rem;
+  border-radius: 12px;
+  overflow: hidden;   /* clips table to rounded corners of container */
 }
 
 .table th {
@@ -32,11 +39,17 @@
   border-bottom: 1px solid #e5e7eb;
 }
 
-/* ── Rows ──────────────────────────────────────────────────────────── */
+/* Round the table corners properly since we removed overflow:hidden from container */
+.table thead tr th:first-child  { border-top-left-radius: 12px; }
+.table thead tr th:last-child   { border-top-right-radius: 12px; }
+.table tbody tr:last-child td:first-child { border-bottom-left-radius: 12px; }
+.table tbody tr:last-child td:last-child  { border-bottom-right-radius: 12px; }
+
+/* ── Rows ──────────────────────────────────────────────────────────────────── */
 
 .row { transition: background 0.1s; }
-.row:hover { background: #fafafa; }
-.rowSelected { background: #eff6ff !important; }
+.row:hover    { background: #fafafa; }
+.rowSelected  { background: #eff6ff !important; }
 .rowSelected:hover { background: #dbeafe !important; }
 
 .row td {
@@ -48,14 +61,13 @@
 
 .row:last-child td { border-bottom: none; }
 
-/* ── Columns ───────────────────────────────────────────────────────── */
+/* ── Columns ───────────────────────────────────────────────────────────────── */
 
 .checkCol {
   width: 36px;
   padding: 0 8px 0 14px !important;
   text-align: center;
 }
-
 .checkCol input[type="checkbox"] {
   cursor: pointer;
   width: 15px;
@@ -117,14 +129,18 @@
   display: block;
 }
 
+/* Foreign-currency subtitle — e.g. "EUR 23.15" under the MXN amount */
 .originalAmount {
-  font-size: 0.7rem;
+  font-size: 0.72rem;
   color: #9ca3af;
   margin-top: 2px;
   white-space: nowrap;
+  text-align: right;
+  font-weight: 400;
+  letter-spacing: 0.2px;
 }
 
-/* ── Inline notes input ────────────────────────────────────────────── */
+/* ── Inline notes ──────────────────────────────────────────────────────────── */
 
 .notesCol {
   min-width: 140px;
@@ -143,33 +159,18 @@
   transition: border-color 0.15s, background 0.15s;
   box-sizing: border-box;
 }
-
-.notesInput:hover {
-  border-color: #d1d5db;
-  background: #f9fafb;
-}
-
-.notesInput:focus {
-  border-color: #6366f1;
-  background: #fff;
-  box-shadow: 0 0 0 2px rgba(99,102,241,0.15);
-}
-
+.notesInput:hover  { border-color: #d1d5db; background: #f9fafb; }
+.notesInput:focus  { border-color: #6366f1; background: #fff; box-shadow: 0 0 0 2px rgba(99,102,241,.15); }
 .notesInput::placeholder { color: #c4c4c4; font-style: italic; }
+.notesSaving { border-color: #a5b4fc !important; background: #eef2ff !important; }
 
-.notesSaving {
-  border-color: #a5b4fc !important;
-  background: #eef2ff !important;
-}
-
-/* ── 3-dot menu ────────────────────────────────────────────────────── */
+/* ── 3-dot menu button ─────────────────────────────────────────────────────── */
 
 .menuCell {
-  width: 32px;
+  width: 36px;
   padding: 0 8px !important;
+  text-align: center;
 }
-
-.menuWrap { position: relative; }
 
 .menuBtn {
   background: none;
@@ -182,20 +183,26 @@
   line-height: 1;
   transition: all 0.15s;
 }
+.menuBtn:hover,
+.menuBtnActive { background: #f3f4f6; color: #555; }
 
-.menuBtn:hover { background: #f3f4f6; color: #555; }
+/* ── Portal dropdown — rendered at document.body, never clipped ────────────── */
 
-.dropdown {
-  position: absolute;
-  right: 0;
-  top: 100%;
+.dropdownPortal {
+  position: fixed;          /* coordinates from JS getBoundingClientRect */
   background: #fff;
   border: 1px solid #e5e7eb;
   border-radius: 8px;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
-  z-index: 50;
-  min-width: 130px;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.14);
+  z-index: 9999;
+  min-width: 140px;
   overflow: hidden;
+  animation: dropIn 0.12s ease;
+}
+
+@keyframes dropIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 .editItem {
@@ -210,7 +217,6 @@
   color: #374151;
   transition: background 0.1s;
 }
-
 .editItem:hover { background: #f3f4f6; }
 
 .divider { height: 1px; background: #f3f4f6; }
@@ -227,11 +233,10 @@
   color: #dc2626;
   transition: background 0.1s;
 }
-
-.deleteItem:hover { background: #fef2f2; }
+.deleteItem:hover    { background: #fef2f2; }
 .deleteItem:disabled { opacity: 0.6; cursor: not-allowed; }
 
-/* ── Floating bulk-action bar ──────────────────────────────────────── */
+/* ── Floating bulk-action bar ──────────────────────────────────────────────── */
 
 .bulkBar {
   position: fixed;
@@ -259,9 +264,9 @@
 .bulkCount {
   font-size: 0.85rem;
   font-weight: 600;
-  padding-right: 6px;
+  padding-right: 8px;
   border-right: 1px solid rgba(255,255,255,0.2);
-  margin-right: 4px;
+  margin-right: 2px;
 }
 
 .bulkSelect {
@@ -275,9 +280,8 @@
   outline: none;
   min-width: 155px;
 }
-
 .bulkSelect option { background: #1e1b4b; color: #fff; }
-.bulkSelect:focus { border-color: #a5b4fc; }
+.bulkSelect:focus  { border-color: #a5b4fc; }
 
 .bulkApply {
   background: #6366f1;
@@ -290,7 +294,6 @@
   cursor: pointer;
   transition: background 0.15s;
 }
-
 .bulkApply:hover:not(:disabled) { background: #4f46e5; }
 .bulkApply:disabled { opacity: 0.5; cursor: not-allowed; }
 
@@ -304,5 +307,4 @@
   cursor: pointer;
   transition: all 0.15s;
 }
-
 .bulkCancel:hover { background: rgba(255,255,255,0.1); color: #fff; }

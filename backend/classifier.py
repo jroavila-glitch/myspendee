@@ -174,6 +174,11 @@ def classify(description: str, amount_mxn: Decimal, bank_name: str,
                       desc_override="Rent - " + description.strip(),
                       fixed_eur=600)
 
+    # ── Uber Eats MUST come before generic Uber/transport rule ──────────────
+    # Catches: "UBER EATS", "UBER * EATS", "UBER*EATS", "UBER* EATS", "UBER *EATS"
+    if re.search(r'uber\s*\*?\s*eats', desc):
+        return result("expense", "Food & Drink")
+
     # Transport
     if re.search(r'\bbolt\b|bolt\.eu', desc):
         return result("expense", "Transport")
@@ -185,9 +190,6 @@ def classify(description: str, amount_mxn: Decimal, bank_name: str,
         return result("expense", "Transport")
 
     # Food & Drink
-    if "uber eats" in desc or "uber * eats" in desc or "uber*eats" in desc:
-        return result("expense", "Food & Drink")
-
     food_keywords = [
         "fertonani cafe", "pizza", "pizzeria", "rc sanches", "pomme eatery",
         "shifu ramen", "jncquoi asia", "street chow", "temas medievais",
@@ -195,6 +197,8 @@ def classify(description: str, amount_mxn: Decimal, bank_name: str,
         "ma duque loule", "enjoy value", "zhang yuemei",
         "nyxkvending", "nyx*kvending", "nyx kvending",
         "pandorca", "panorca",
+        "feito portugal",
+        "asur c conv shop",
     ]
     for kw in food_keywords:
         if kw in desc or kw in desc_norm:
@@ -326,6 +330,8 @@ def classify(description: str, amount_mxn: Decimal, bank_name: str,
         return result("expense", "Gym")
 
     # Healthcare
+    if "gbmd" in desc_norm and "medicina" in desc_norm:
+        return result("expense", "Healthcare")
     if "rituals" in desc:
         return result("expense", "Healthcare")
 
