@@ -15,15 +15,15 @@ const PRESET_BANKS = [
  *   onSave        () => void
  *   transaction   object | null — if provided, opens in edit mode
  */
-export default function AddTransactionModal({ onClose, onSave, transaction }) {
+export default function AddTransactionModal({ onClose, onSave, transaction, defaultCategory, defaultType }) {
   const isEdit = Boolean(transaction)
   const [categories, setCategories] = useState({ income: [], expense: [] })
   const [form, setForm] = useState({
     date: transaction?.date ?? new Date().toISOString().split('T')[0],
     description: transaction?.description ?? '',
     amount_mxn: transaction?.amount_mxn != null ? String(Math.abs(Number(transaction.amount_mxn))) : '',
-    category: transaction?.category ?? '',
-    type: transaction?.type === 'income' ? 'income' : 'expense',
+    category: transaction?.category ?? defaultCategory ?? '',
+    type: transaction?.type === 'income' ? 'income' : (defaultType ?? 'expense'),
     bank_name: transaction?.bank_name ?? '',
     notes: transaction?.notes ?? '',
   })

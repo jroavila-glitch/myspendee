@@ -11,7 +11,9 @@ from database import get_db, init_db
 from schemas import (
     TransactionOut, TransactionCreate, TransactionUpdate,
     BulkUpdateRequest, BulkUpdateResponse,
-    SummaryOut, BreakdownOut, UploadResponse, StatementOut
+    SummaryOut, BreakdownOut, UploadResponse, StatementOut,
+    LoanOut, LoanCreate, LoanUpdate,
+    LoanPaymentOut, LoanPaymentCreate, LoanPaymentUpdate,
 )
 import crud
 from pdf_processor import process_pdf
@@ -217,3 +219,65 @@ def get_banks(db: Session = Depends(get_db)):
 @app.get("/categories")
 def get_categories(db: Session = Depends(get_db)):
     return crud.get_categories(db)
+
+
+# ── Loans ─────────────────────────────────────────────────────────────────────
+
+@app.get("/loans", response_model=list[LoanOut])
+def list_loans(db: Session = Depends(get_db)):
+    return crud.get_loans(db)
+
+
+@app.get("/loans/{loan_id}", response_model=LoanOut)
+def get_loan(loan_id: UUID, db: Session = Depends(get_db)):
+    loan = crud.get_loan(db, loan_id)
+    if not loan:
+        raise HTTPException(status_code=404, detail="Loan not found")
+    return loan
+
+
+@app.post("/loans", response_model=LoanOut, status_code=201)
+def create_loan(data: LoanCreate, db: Session = Depends(get_db)):
+    return crud.create_loan(db, data)
+
+
+@app.put("/loans/{loan_id}", response_model=LoanOut)
+def update_loan(loan_id: UUID, data: LoanUpdate, db: Session = Depends(get_db)):
+    loan = crud.update_loan(db, loan_id, data)
+    if not loan:
+        raise HTTPException(status_code=404, detail="Loan not found")
+    return loan
+
+
+@app.delete("/loans/{loan_id}", status_code=204)
+def delete_loan(loan_id: UUID, db: Session = Depends(get_db)):
+    if not crud.delete_loan(db, loan_id):
+        raise HTTPException(status_code=404, detail="Loan not found")
+
+
+@app.get("/loans/{loan_id}/payments", response_model=list[LoanPaymentOut])
+def list_loan_payments(loan_id: UUID, db: Session = Depends(get_db)):
+    return crud.get_loan_payments(db, loan_id)
+
+
+@app.post("/loans/{loan_id}/payments", response_model=LoanPaymentOut, status_code=201)
+def add_loan_payment(loan_id: UUID, data: LoanPaymentCreate, db: Session = Depends(get_db)):
+    loan = crud.get_loan(db, loan_id)
+    if not loan:
+        raise HTTPException(status_code=404, detail="Loan not found")
+    return crud.create_loan_payment(db, loan_id, data)
+
+
+@app.put("/loans/{loan_id}/payments/{payment_id}", response_model=LoanPaymentOut)
+def update_loan_payment(loan_id: UUID, payment_id: UUID, data: LoanPaymentUpdate,
+                        db: Session = Depends(get_db)):
+    p = crud.update_loan_payment(db, payment_id, data)
+    if not p:
+        raise HTTPException(status_code=404, detail="Payment not found")
+    return p
+
+
+@app.delete("/loans/{loan_id}/payments/{payment_id}", status_code=204)
+def delete_loan_payment(loan_id: UUID, payment_id: UUID, db: Session = Depends(get_db)):
+    if not crud.delete_loan_payment(db, payment_id):
+        raise HTTPException(status_code=404, detail="Payment not found")

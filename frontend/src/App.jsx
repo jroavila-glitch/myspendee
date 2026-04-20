@@ -2,6 +2,8 @@ import React, { useState } from 'react'
 import Dashboard from './components/Dashboard.jsx'
 import Upload from './components/Upload.jsx'
 import Statements from './components/Statements.jsx'
+import Rent from './components/Rent.jsx'
+import Loan from './components/Loan.jsx'
 import styles from './App.module.css'
 
 export default function App() {
@@ -30,6 +32,18 @@ export default function App() {
               Dashboard
             </button>
             <button
+              className={`${styles.navBtn} ${activeTab === 'rent' ? styles.active : ''}`}
+              onClick={() => setActiveTab('rent')}
+            >
+              🏠 Rent
+            </button>
+            <button
+              className={`${styles.navBtn} ${activeTab === 'loan' ? styles.active : ''}`}
+              onClick={() => setActiveTab('loan')}
+            >
+              💳 Loan
+            </button>
+            <button
               className={`${styles.navBtn} ${activeTab === 'statements' ? styles.active : ''}`}
               onClick={() => setActiveTab('statements')}
             >
@@ -46,6 +60,8 @@ export default function App() {
       </header>
       <main className={styles.main}>
         {activeTab === 'dashboard' && <Dashboard key={refreshKey} />}
+        {activeTab === 'rent' && <Rent />}
+        {activeTab === 'loan' && <Loan />}
         {activeTab === 'statements' && (
           <Statements key={refreshKey} onDeleted={handleStatementDeleted} />
         )}

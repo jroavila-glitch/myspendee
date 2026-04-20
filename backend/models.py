@@ -2,6 +2,7 @@ import uuid
 from datetime import datetime, date
 from sqlalchemy import Column, String, Numeric, Boolean, Integer, Date, DateTime, Text, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import relationship
 from database import Base
 
 
@@ -37,3 +38,31 @@ class Transaction(Base):
     notes = Column(Text, nullable=True)
     statement_id = Column(UUID(as_uuid=True), nullable=True)  # linked to Statement (no FK — migration handles it)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+
+class Loan(Base):
+    __tablename__ = "loans"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    name = Column(String(200), nullable=False)
+    principal = Column(Numeric(12, 2), nullable=False)
+    monthly_payment = Column(Numeric(12, 2), nullable=True)
+    start_date = Column(Date, nullable=False)
+    notes = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    payments = relationship("LoanPayment", back_populates="loan",
+                            cascade="all, delete-orphan", order_by="LoanPayment.date.desc()")
+
+
+class LoanPayment(Base):
+    __tablename__ = "loan_payments"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    loan_id = Column(UUID(as_uuid=True), ForeignKey("loans.id", ondelete="CASCADE"), nullable=False)
+    date = Column(Date, nullable=False)
+    amount = Column(Numeric(12, 2), nullable=False)
+    notes = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    loan = relationship("Loan", back_populates="payments")

@@ -101,3 +101,57 @@ class UploadResponse(BaseModel):
     ignored: int
     errors: list[str]
     statement_id: Optional[UUID] = None
+
+
+# ── Loans ─────────────────────────────────────────────────────────────────────
+
+class LoanCreate(BaseModel):
+    name: str
+    principal: Decimal
+    monthly_payment: Optional[Decimal] = None
+    start_date: _Date
+    notes: Optional[str] = None
+
+
+class LoanUpdate(BaseModel):
+    name: Optional[str] = None
+    principal: Optional[Decimal] = None
+    monthly_payment: Optional[Decimal] = None
+    start_date: Optional[_Date] = None
+    notes: Optional[str] = None
+
+
+class LoanPaymentCreate(BaseModel):
+    date: _Date
+    amount: Decimal
+    notes: Optional[str] = None
+
+
+class LoanPaymentUpdate(BaseModel):
+    date: Optional[_Date] = None
+    amount: Optional[Decimal] = None
+    notes: Optional[str] = None
+
+
+class LoanPaymentOut(BaseModel):
+    id: UUID
+    loan_id: UUID
+    date: _Date
+    amount: Decimal
+    notes: Optional[str] = None
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class LoanOut(BaseModel):
+    id: UUID
+    name: str
+    principal: Decimal
+    monthly_payment: Optional[Decimal] = None
+    start_date: _Date
+    notes: Optional[str] = None
+    created_at: datetime
+    payments: list[LoanPaymentOut] = []
+
+    model_config = {"from_attributes": True}

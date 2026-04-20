@@ -28,7 +28,7 @@ def get_db():
 
 
 def init_db():
-    from models import Transaction, Statement  # noqa: F401
+    from models import Transaction, Statement, Loan, LoanPayment  # noqa: F401
     Base.metadata.create_all(bind=engine)
     _migrate()
 

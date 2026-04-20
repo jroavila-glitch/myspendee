@@ -6,8 +6,8 @@ from uuid import UUID
 from sqlalchemy import func, and_
 from sqlalchemy.orm import Session
 
-from models import Transaction, Statement
-from schemas import TransactionCreate, TransactionUpdate
+from models import Transaction, Statement, Loan, LoanPayment
+from schemas import TransactionCreate, TransactionUpdate, LoanCreate, LoanUpdate, LoanPaymentCreate, LoanPaymentUpdate
 
 
 # ── Duplicate Detection ───────────────────────────────────────────────────────
@@ -218,6 +218,81 @@ def get_banks(db: Session) -> list[str]:
     return [r[0] for r in rows]
 
 
+# ── Loans ─────────────────────────────────────────────────────────────────────
+
+def get_loans(db: Session) -> list[Loan]:
+    return db.query(Loan).order_by(Loan.created_at.asc()).all()
+
+
+def get_loan(db: Session, loan_id: UUID) -> Optional[Loan]:
+    return db.query(Loan).filter(Loan.id == loan_id).first()
+
+
+def create_loan(db: Session, data: LoanCreate) -> Loan:
+    loan = Loan(**data.model_dump())
+    db.add(loan)
+    db.commit()
+    db.refresh(loan)
+    return loan
+
+
+def update_loan(db: Session, loan_id: UUID, data: LoanUpdate) -> Optional[Loan]:
+    loan = db.query(Loan).filter(Loan.id == loan_id).first()
+    if not loan:
+        return None
+    for field, value in data.model_dump(exclude_none=True).items():
+        setattr(loan, field, value)
+    db.commit()
+    db.refresh(loan)
+    return loan
+
+
+def delete_loan(db: Session, loan_id: UUID) -> bool:
+    loan = db.query(Loan).filter(Loan.id == loan_id).first()
+    if not loan:
+        return False
+    db.delete(loan)
+    db.commit()
+    return True
+
+
+def get_loan_payments(db: Session, loan_id: UUID) -> list[LoanPayment]:
+    return (
+        db.query(LoanPayment)
+        .filter(LoanPayment.loan_id == loan_id)
+        .order_by(LoanPayment.date.desc())
+        .all()
+    )
+
+
+def create_loan_payment(db: Session, loan_id: UUID, data: LoanPaymentCreate) -> LoanPayment:
+    payment = LoanPayment(loan_id=loan_id, **data.model_dump())
+    db.add(payment)
+    db.commit()
+    db.refresh(payment)
+    return payment
+
+
+def update_loan_payment(db: Session, payment_id: UUID, data: LoanPaymentUpdate) -> Optional[LoanPayment]:
+    p = db.query(LoanPayment).filter(LoanPayment.id == payment_id).first()
+    if not p:
+        return None
+    for field, value in data.model_dump(exclude_none=True).items():
+        setattr(p, field, value)
+    db.commit()
+    db.refresh(p)
+    return p
+
+
+def delete_loan_payment(db: Session, payment_id: UUID) -> bool:
+    p = db.query(LoanPayment).filter(LoanPayment.id == payment_id).first()
+    if not p:
+        return False
+    db.delete(p)
+    db.commit()
+    return True
+
+
 def get_categories(db: Session) -> dict:
     return {
         "income": [
@@ -225,7 +300,7 @@ def get_categories(db: Session) -> dict:
             "PlaticArte", "Credit Cards Cashback", "Azulik", "Investments", "Gifts", "Other"
         ],
         "expense": [
-            "Home", "Groceries", "Food & Drink", "Tennis", "Car", "Transport",
+            "Rent", "Home", "Groceries", "Food & Drink", "Tennis", "Car", "Transport",
             "IG Ro Project", "Healthcare", "Gym", "Phone/Tech", "Books", "Travel",
             "Personal Dev", "Gifts", "Entertainment", "Visa Portugal", "Bills/Fees",
             "Clothing", "Perenniam Agency", "Beauty", "Investments", "Loan Papá", "Other"

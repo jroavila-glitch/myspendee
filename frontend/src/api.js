@@ -32,3 +32,23 @@ export const bulkUpdateTransactions = (ids, fields) =>
 export const getStatements = () => api.get('/statements')
 
 export const deleteStatement = (id) => api.delete(`/statements/${id}`)
+
+// ── Loans ─────────────────────────────────────────────────────────────────────
+
+export const getLoans = () => api.get('/loans')
+
+export const createLoan = (data) => api.post('/loans', data)
+
+export const updateLoan = (id, data) => api.put(`/loans/${id}`, data)
+
+export const deleteLoan = (id) => api.delete(`/loans/${id}`)
+
+export const getLoanPayments = (loanId) => api.get(`/loans/${loanId}/payments`)
+
+export const addLoanPayment = (loanId, data) => api.post(`/loans/${loanId}/payments`, data)
+
+export const updateLoanPayment = (loanId, paymentId, data) =>
+  api.put(`/loans/${loanId}/payments/${paymentId}`, data)
+
+export const deleteLoanPayment = (loanId, paymentId) =>
+  api.delete(`/loans/${loanId}/payments/${paymentId}`)
